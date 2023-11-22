@@ -6,4 +6,4 @@ from it, and to take care of some basic exception handling.
 
 As I have yet a lot to learn about Python, the code I had ended up with was way too complex and redundant for my taste. Therefore, I decided to re-design in into an object-oriented one.
 
-Anyway, as for my first project of this kind, I'm satisfied. However, I'm probably going to do a major overhaul of the get_input static method after a while.
+Anyway, as for my first project of this kind, I'm satisfied, especially considering how much this project allowed me to learn.

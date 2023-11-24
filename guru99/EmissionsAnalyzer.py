@@ -93,7 +93,6 @@ class AnalysisCSV:
                 print(f"There is no such file as: {user_inp}. Try again.")
                 continue
 
-            # If the file contains less than 2 rows, print the information and restart the loop.
             if reader_len < 2:
                 print("The file must have at least two rows of data. Try again.")
                 continue
@@ -126,7 +125,6 @@ class AnalysisCSV:
         self.first_key = self.countries.pop(0)
         self.first_value = self.data_dict.get(self.first_key)
 
-        # Print a message to indicate the data has been read.
         print("All data has been read into a dictionary.\n")
 
     def get_year(self, prompt: str) -> int:
@@ -150,11 +148,10 @@ class AnalysisCSV:
                 # Try to cast the user's input into an integer.
                 user_inp = int(user_inp)
             except ValueError:
-                # Restart the loop if the user input cannot be cast into an integer.
                 print("You have not provided a year integer. Try again.")
                 continue
 
-            # Restart the loop if the provided year is not within the range of available years.
+            # Check whether the provided year is within the range of years in self.first_value.
             if not int(self.first_value[0]) <= user_inp <= int(self.first_value[-1]):
                 print("You have provided an out-of-range year. Try again.")
                 continue
@@ -176,19 +173,20 @@ class AnalysisCSV:
         while True:
             # Split the user's input with a comma delimiter.
             user_inp = input(prompt).split(",")
-
-            # Save the length of the list created after splitting the user's input into a variable for future use.
             user_inp_len = len(user_inp)
 
             # Check if the length of the above list is as demanded by the num and strict arguments.
-            # If it isn't, print the information and restart the loop.
             if (strict and user_inp_len == num) or (not strict and 0 < user_inp_len <= num):
                 # Strip each item in the list of whitespace on each side and capitalize each word in the item.
                 # Also, lower the case of the word 'And' if it exists in the item.
                 user_inp = [c.strip().title().replace(" And ", " and ") for c in user_inp]
 
-                # Check if all the items in the list correspond with the countries in self.countries.
-                # If not, print the information and restart the loop.
+                # Check for duplicates using a set.
+                if len(set(user_inp)) < user_inp_len:
+                    print("You have entered some duplicate countries. Try again.")
+                    continue
+
+                # Check whether all the items in the list correspond with the countries in self.countries.
                 if not all([c in self.countries for c in user_inp]):
                     print("You have provided some incorrect names of countries. Try again.")
                     continue
@@ -218,7 +216,6 @@ class AnalysisCSV:
             for c in countries_req:
                 writer.writerow([c] + self.data_dict[c])
 
-        # Print a success message indicating which countries' data was extracted and into what file.
         print(f"\nData successfully extracted for {', '.join(countries_req)} and saved into the file: "
               f"{subset_filename}.")
 
@@ -253,7 +250,6 @@ class AnalysisCSV:
         ax.set_xticks(x_ticks)
 
         # Set the title of the plot.
-        # TODO: Set the title and the labels based on the file's data.
         plt.title("Year vs Emissions in Capita")
 
         # Set the x-axis label.
@@ -289,9 +285,8 @@ class AnalysisCSV:
         year_values = [float(self.data_dict[k][year_index]) for k in self.data_dict if k != self.first_key]
 
         # Print the results of the following operations:
-        # Find the indices of min & max values in year_values and print the corresponding countries in self.countries.
-        # Calculate the average of the year (rounded to 6 decimal places) by dividing the sum of year_values
-        # by its length, and rounding the result to six decimal places.
+        # Find the indices of min & max values in year_values and get the corresponding countries in self.countries.
+        # Calculate the annual average rounded to six decimal places.
         print(f"In {year}, countries with minimum and maximum CO2 emission levels were: "
               f"[{self.countries[year_values.index(min(year_values))]}] "
               f"and [{self.countries[year_values.index(max(year_values))]}], respectively.\n"

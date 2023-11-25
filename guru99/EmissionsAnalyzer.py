@@ -59,6 +59,9 @@ class AnalysisCSV:
 
         analyze_year(self, year: int) -> None
             Finds and displays the countries with the min and max emission levels in the year, and the year's average.
+
+        verify_structure(self) -> bool
+            Checks whether the data in the initialized dictionary is of the expected types.
     """
 
     @staticmethod
@@ -74,7 +77,6 @@ class AnalysisCSV:
 
         Raises:
             FileNotFoundError: If the file does not exist.
-            ValueError: If the file has less than two rows of data.
         """
 
         while True:
@@ -110,7 +112,7 @@ class AnalysisCSV:
             None
         """
 
-        self.filename = filename  # Store the filename as an attribute.
+        self.filename = filename
         with open(filename, newline="") as csvfile:
             reader = csv.reader(csvfile)
 
@@ -121,7 +123,7 @@ class AnalysisCSV:
         # Get a list of the keys (countries) from the dictionary.
         self.countries = list(self.data_dict.keys())
 
-        # Pop the first key from the list and get the first value from the dictionary.
+        # Get the first item from the list and the first value from the dictionary.
         self.first_key = self.countries.pop(0)
         self.first_value = self.data_dict.get(self.first_key)
 
@@ -292,9 +294,39 @@ class AnalysisCSV:
               f"and [{self.countries[year_values.index(max(year_values))]}], respectively.\n"
               f"Average CO2 emissions in {year} were {round(sum(year_values) / len(year_values), 6)}")
 
+    def verify_structure(self) -> bool:
+        """
+        Checks whether the data in the initialized dictionary is of the expected types.
+
+        Returns:
+            bool
+        """
+
+        enum_dict = enumerate(self.data_dict.items())
+        for i, e in enum_dict:
+            try:
+                _ = str(e[0])
+            except ValueError:
+                return False
+
+            if i == 0:
+                try:
+                    _ = [int(item) for item in e[1]]
+                except ValueError:
+                    return False
+            else:
+                try:
+                    _ = [float(item) for item in e[1]]
+                except ValueError:
+                    return False
+        return True
+
 
 def main():
     csv_obj = AnalysisCSV(AnalysisCSV.get_file("Provide the name of the file CSV you wish to read data from: "))
+
+    # It may be unnecessary for the moment.
+    # print(f"Is the file structured as expected:\t{csv_obj.verify_structure()}")
     csv_obj.analyze_year(csv_obj.get_year(f"Select a year to find statistics "
                                           f"({csv_obj.first_value[0]}-{csv_obj.first_value[-1]}): "))
     csv_obj.visualize(csv_obj.get_country("Select a country to visualize: ", 1))

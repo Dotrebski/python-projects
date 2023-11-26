@@ -8,29 +8,31 @@ This script allows the user to process and analyze a CSV file of a specific desi
  * initializes an object with values from that file enabling a convenient analysis;
  * analyzes any year in the file's range;
  * visualizes one to two countries using Matplotlib;
+ * verifies whether the data in the initialized dictionary adheres to the specific design described below;
  * and finally extracts at least one country (and the associated data) to a subset CSV file.
 
 The script requires that `NumPy` and `Matplotlib` be installed within the Python environment the script is run in.
-Also, it imports the built-in `csv` module. According to vermin, the minimum required version of Python to run
-the script is 3.6.
+Also, it imports the built-in `csv` and 'os' modules. According to vermin, the minimum required version of Python
+to run the script is 3.6.
 
 The specific design mentioned above is that:
  1) the first row should contain a range of years;
  2) the following rows should contains decimal values;
- 3) the first column of the first row should say what the file represents (e.g., CO2 per capita);
- 3) the first columns of the following rows should each contain a different country's name with proper capitalization.
+ 3) optionally, the first column of the first row should say what the file represents (e.g., CO2 per capita);
+ 4) the first column of the following rows should each contain a different country's name with proper capitalization.
 
-This file can also be imported as a module and contains the main function of the script.
+This file can also be imported as a module; it contains the main function of the script.
 
 Created by dotrebski in the course of participating in the guru99 Python project, with the constraint that
-`pandas` may not be used. As a **beginner**, I found it very challenging. However, in the end, it was a very
-enjoyable exercise. I'm not planning on generalizing the design for the time being.
+`pandas` may not be used. As a **beginner**, I found it very challenging. However, in the end, it was
+a very enjoyable exercise, as well. I'm not planning on generalizing the design for the time being.
 """
 
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
+from os.path import exists, splitext
 
 
 class AnalysisCSV:
@@ -51,7 +53,7 @@ class AnalysisCSV:
         get_country(self, prompt: str, num: int, strict: bool = True) -> list[str]
             Prompts the user to enter comma-separated list of valid countries and returns their literal list.
 
-        extract_to_file(self, countries_req: list) -> None
+        extract_to_file(self, countries_req: list, overwrite: bool = False) -> None
             Extracts data associated with each country on the list and saves it into a new CSV file.
 
         visualize(self, countries_req: list) -> None
@@ -91,7 +93,6 @@ class AnalysisCSV:
                 with open(user_inp, newline="") as csvfile:
                     reader_len = len(list(csv.reader(csvfile)))
             except FileNotFoundError:
-                # If the file doesn't exist, print the information and restart the loop.
                 print(f"There is no such file as: {user_inp}. Try again.")
                 continue
 
@@ -166,7 +167,7 @@ class AnalysisCSV:
         Args:
             prompt (str): The message to display to the user.
             num (int): The number of countries to use.
-            strict (bool) = True: Whether to demand exactly the num of countries or from 1 to num of the countries.
+            strict (bool): Whether to demand exactly the num or from 1 to num of the countries. Defaults to True.
 
         Returns:
             list[str]: The list of countries.
@@ -181,7 +182,8 @@ class AnalysisCSV:
             if (strict and user_inp_len == num) or (not strict and 0 < user_inp_len <= num):
                 # Strip each item in the list of whitespace on each side and capitalize each word in the item.
                 # Also, lower the case of the word 'And' if it exists in the item.
-                user_inp = [c.strip().title().replace(" And ", " and ") for c in user_inp]
+                user_inp = [c.strip().title().replace(" And ", " and ").replace("D'", "d'")
+                            for c in user_inp]
 
                 # Check for duplicates using a set.
                 if len(set(user_inp)) < user_inp_len:
@@ -195,26 +197,36 @@ class AnalysisCSV:
                 return user_inp
             print(f"The provided input doesn't match the arguments (num: {num}, strict: {strict}). Try again.")
 
-    def extract_to_file(self, countries_req: list) -> None:
+    def extract_to_file(self, countries_req: list, overwrite: bool = False) -> None:
         """
         Extracts the data associated with each country on the list and saves it into a new CSV file.
 
         Args:
             countries_req (list): The list of countries to extract.
-
+            
+            overwrite (bool): Whether to overwrite the [filename]_subset.csv file. Defaults to False.
         Returns:
             None
         """
 
         # Prepare the name for the subset by appending '_subset.csv' to the name of the original CSV file.
         subset_filename = self.filename.replace(".csv", "_subset.csv")
+
+        # If the overwrite parameter is False and the file already exist, incrementally find the closest free name.
+        if not overwrite and exists(subset_filename):
+            counter = 0
+            name, ext = splitext(subset_filename)
+            while exists(subset_filename):
+                counter += 1
+                subset_filename = f"{name}_{counter}{ext}"
+
         with open(subset_filename, "w+", newline="") as csvfile:
             writer = csv.writer(csvfile)
 
             # Write in the first row (the same for every possible extraction).
             writer.writerow([self.first_key] + self.data_dict[self.first_key])
 
-            # For each country, write in a concatenation of two lists: 1. the country's name, 2. corresponding value.
+            # For each country, write in a concatenation of two lists: the country's name, and the corresponding value.
             for c in countries_req:
                 writer.writerow([c] + self.data_dict[c])
 
@@ -259,7 +271,7 @@ class AnalysisCSV:
 
         # Set the y-axis label depending on the number of countries.
         if len(countries_req) > 1:
-            plt.ylabel(f"Emissions")
+            plt.ylabel("Emissions")
 
             # Add a legend to show the country names.
             ax.legend()
@@ -300,21 +312,29 @@ class AnalysisCSV:
 
         Returns:
             bool
+
+        Raises:
+            ValueError: If the dictionary doesn't conform to the design described in the module's docstring.
         """
 
+        # Enumerate the items in the dictionary to have an easier way of tracking the index.
         enum_dict = enumerate(self.data_dict.items())
         for i, e in enum_dict:
-            try:
-                _ = str(e[0])
-            except ValueError:
-                return False
 
+            # Check if the first row's values can be cast into integers.
             if i == 0:
                 try:
                     _ = [int(item) for item in e[1]]
                 except ValueError:
                     return False
+
             else:
+                # Check if the key has any letters, but omit any dashes or spaces.
+                # The first column in the first row is of no consequence to the script, so such a check is omitted.
+                if not e[0].translate(str.maketrans("", "", "-' ")).isalpha():
+                    return False
+
+                # Check if the other rows' values can be cast into floats.
                 try:
                     _ = [float(item) for item in e[1]]
                 except ValueError:
